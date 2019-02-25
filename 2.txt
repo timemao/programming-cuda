@@ -1,3 +1,4 @@
+//--p35--
 void MatrixMultiplication_cpu(float* M,float*N,float* P,int Width)
 {
     for(int i=0;i<Width;++i)
@@ -11,6 +12,7 @@ void MatrixMultiplication_cpu(float* M,float*N,float* P,int Width)
             P[i*Width+j]=sum;
         }
 }
+//--p 41--
 void MatrixMultiplication_gpu(float* M,float*N,float* P,int Width)
 {
     int size=Width*Width*sizeof(float);
@@ -32,6 +34,7 @@ void MatrixMultiplication_gpu(float* M,float*N,float* P,int Width)
     cudaMemcpy(P,Pd,size,cudaMemcpyDeviceToHost);
     cudaFree(Md); cudaFree(Nd); cudaFree(Pd);
 }
+//--p 42--
 __global__ void MatrixMulKernel(float* Md,float*Nd,float*Pd,int Width)
 {
     int tx=threadIdx.x;
