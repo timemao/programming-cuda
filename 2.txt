@@ -34,7 +34,7 @@ void MatrixMultiplication_gpu(float* M,float*N,float* P,int Width)
     cudaMemcpy(P,Pd,size,cudaMemcpyDeviceToHost);
     cudaFree(Md); cudaFree(Nd); cudaFree(Pd);
 }
-//--p 42--
+//--p 57--
 __global__ void MatrixMulKernel(float* Md,float*Nd,float*Pd,int Width)
 {
     int tx=threadIdx.x;
