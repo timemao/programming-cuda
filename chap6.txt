@@ -1,0 +1,26 @@
+//--p84---规约求和函数--------
+
+__shared__ float partialSum[ ];
+
+unsigned int t=threadIdx.x;
+for (unsigned stride=1; stride<blockDim.x;stride*=2)
+{
+    __syncthreads();
+	// 确保上一次迭代的所有部分和已经产生
+    if(t%(2*stride)==0)
+	 partialSum[t]+=partialSum[t+stride];
+}
+//------
+
+//--p85--减少线程分支---
+__shared__ float partialSum[ ];
+
+unsigned int t=threadIdx.x;
+for(unsigned int stride=blockDim.x>>1; stride>0; stride>>=1)
+// >>= 类似于 +=，=赋值
+{
+	__syncthreads();
+	if (t<stride)
+	 partialSum[t]+=partialSum[t+stride];
+}
+//----
