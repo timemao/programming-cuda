@@ -1,0 +1,52 @@
+// 3-4 主机代码矩阵乘法示例
+void MatrixMultiplication_cpu(float* M,float*N,float* P,int Width)
+{
+    for(int i=0;i<Width;++i)
+        for (int j=0;j<Width;++j){
+            float sun=0;
+            for (int k=0;k<Width;++k){
+                float a=M[i*Width+k];
+                float b=N[k*Width+j];
+                sum+=a*b;
+            }
+            P[i*Width+j]=sum;
+        }
+}
+// 3-10 已修改的矩阵乘法函数
+void MatrixMultiplication_gpu(float* M,float*N,float* P,int Width)
+{
+    int size=Width*Width*sizeof(float);
+    float *Md,Nd,Pd;
+    // M,N to device
+    cudaMalloc((void**)&Md,size);
+    cudaMemcpy(Md,M,cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&Nd,size);
+    cudaMemcpy(Nd,N,cudaMemcpyHostToDevice);
+    
+    cudaMalloc((void**)&Pd,size);
+    // kernel
+    //- setting parameters
+    dim3 dimBlock(Width,Width);
+    dim3 dimGrid(1,1);
+    //-start threads
+    MatrixMulKernel<<< dimGrid,dimBlock>>>(Md,Nd,Pd,Width);
+    // P to host
+    cudaMemcpy(P,Pd,size,cudaMemcpyDeviceToHost);
+    cudaFree(Md); cudaFree(Nd); cudaFree(Pd);
+}
+// 3-11 矩阵乘法中的kernel函数
+__global__ void MatrixMulKernel(float* Md,float*Nd,float*Pd,int Width)
+{
+    int tx=threadIdx.x;
+    int ty=threadIdx.y;
+    
+    float Pvalue=0;
+    
+    for(int k=0;k<Width;++k)
+    {
+        float Mdelement=Md[ty*Width+k];
+        float Ndelement=Nd[k*Width+tx];
+        Pvalue+=Mdelement*Ndelement;
+    }
+    Pd[ty*Width+tx]=Pvalue;
+}

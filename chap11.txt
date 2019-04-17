@@ -1,0 +1,6 @@
+// p176
+__kernel void vadd(__global const float* a, //__global表示数组在全局存储器中
+    __global const float *b,__global const float *result){
+	int id=get_global_id(0);
+	result[id]=a[id]+b[id];
+}

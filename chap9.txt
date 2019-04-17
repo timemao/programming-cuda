@@ -1,0 +1,72 @@
+//p146 原始c程序,一个切片（z=z0）
+void cenergy(float *energygrid, dim3 grid, float gridspacing, float z, 
+const float* atoms, int numatoms)
+{
+  int i,j,n;
+  int atomarrdim=numatoms*4;
+  for( j=0;j<grid.y;j++){
+    float y=gridspacing*(float)j;
+	for (i=0;i<grid.x;i++){
+	  float x=gridspacing*(float)i;
+	  float energy=0.0f;
+	  for (n=0;n<atomarrdim;n+=4){
+	    float dx=x-atoms[n];
+		float dy=y-atoms[n+1];
+		float dz=z-atoms[n+2];
+		energy+=atoms[n+4]/sqrtf(dx*dx+dy*dy+dz*dz);
+	  }
+	  energygrid[grid.x*grid.y*k+grid.x*j+i]=energy;
+	}
+  }
+}
+// p149 常数存储器，寄存器，二维结构
+int CHUNK_SIZE=64*1,000;
+
+struct kdata{
+  float x,float y,float z,float w;
+}k; 
+
+__constant__ kdata atominfo[CHUNK_SIZE]; //常数存储器内容不需要放入kernel变量
+
+__global__ void CmpEnergy(float*energygrid,float gridspacing,float coorx,float coory))
+{
+int xindex=blockIdx.x*NUMS_OF_BLOCKIDX+threadIdx.x;
+int yindex=blockIdx.y*NUMS_OF_BLOCKIDY+threadIdx.y;
+
+float curenergy=energygrid[outaddr];
+float coorx=gridspacing*xindex;
+float coory=gridspacing*yindex;
+
+int atomid;
+float energyval=0.0f;
+for( atomid=0; atomid<numatoms;atomid++){
+  float dx=coorx-atominfo[atomid].x;
+  float dy=coory-atominfo[atomid].y;
+  energyval+=atominfo[atomid].w*rsqrtf(dx*dx+dy*dy+atominfo[atomid].z);
+}
+energygrid[outaddr]=curenergy+energyval;
+}
+
+int main()
+{
+  
+  for (int i=0;i<numatoms*4*4/64*1,000;i++)
+  {
+    CmpEnergy<<<threads_per_block,blocks>>>(energygrid,gridspacing,coorx,coory);
+  }
+}
+// p151 一个线程对应4个网格点
+for( atomid=0; atomid<numatoms;atomid++){
+  float dy=coory-atominfo[atomid].y;
+  float dysqpdzsq=(dy*dy)+atominfo[atomid].z;
+  float x=atominfo[atomid].x;
+  float dx1=coorx1-x;
+  float dx2=coorx2-x;
+  float dx3=coorx3-x;
+  float dx4=coorx4-x;
+  float charge=atominfo[atomid].w;
+  energyval1+=charge*rsqrtf(dx1*dx1+dysqpdzsq);
+  energyval2+=charge*rsqrtf(dx2*dx2+dysqpdzsq);
+  energyval3+=charge*rsqrtf(dx4*dx3+dysqpdzsq);
+  energyval4+=charge*rsqrtf(dx4*dx4+dysqpdzsq);
+}

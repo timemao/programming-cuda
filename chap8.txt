@@ -1,0 +1,90 @@
+//--p123--原始计算Fd程序
+for(m=0;m<M;m++)
+{
+  rMu[m]=rPhi[m]*rD[m]+iPhi[m]*iD[m];
+  iMu[m]=rPhi[m]*iD[m]-iPhi[m]*rD[m];
+  
+  for(n=0;n<N;n++){
+    expFHd=2*PI*(kx[m]*x[n]+ky[m]*y[n]+kz[m]*z[n]);
+	
+	cArg=cos(expFHd);
+	sArg=sin(expFHd);
+	
+	rFHd[n]+=rMu[m]*cArg-iMu[m]*sArg;
+	iFHd[n]+=iMu[m]*cArg+rMu[m]*sArg;
+  }
+}
+//--首先循环分裂成2个大循环--
+//--p127--外层循环并行化
+__global__ void cmpMu(float* rPhi, iPhi, rD,iD,rMu,iMu)
+{
+  int m=blockIdx.x*MU_THREADS_PER_BLOCK+threadIdx.x;
+  
+  rMu[m]=rPhi[m]*rD[m]+iPhi[m]*iD[m];
+  iMu[m]=rPhi[m]*iD[m]-iPhi[m]*rD[m];
+}
+//---
+//--p130--内层循环交换m,n并行化迭代顺序，并行化
+__global__ void cmpFHd(float* rPhi,iPhi,phiMag,kx,ky,kz,x,y,z,rMu,iMu,int M)
+{
+  int n=blockIdx.x*MU_THREADS_PER_BLOCK+threadIdx.x;
+  
+  for (m=0;m<M;m++){
+    float expFHd=2*PI*(kx[m]*x[n]+ky[m]*y[n]+kz[m]*z[n]);
+	
+	float cArg=cos(expFHd);
+	float sArg=sin(expFHd);
+	
+	rFHd+=rMu[m]*cArg-iMu[m]*sArg;
+	iFHd+=iMu[m]*sArg+rMu[m]*sArg;
+  }
+}
+//----
+//--p131--循环内多次使用的变量做成自动变量放到寄存器
+__global__ void cmpFHd(float* rPhi,iPhi,phiMag,kx,ky,kz,x,y,z,rMu,iMu,int M)
+{
+  int n=blockIdx.x*MU_THREADS_PER_BLOCK+threadIdx.x;
+  
+  float xn_r=x[n]; float yn_r=y[n]; float zn_r=z[n];
+  float rFHdn_r=rFHd[n]; float iFHdn_r=iFHd[n];
+  
+  for (m=0;m<M;m++){
+    float expFHd=2*PI*(kx[m]*xn_r+ky[m]*yn_r+kz[m]*zn_r);
+	
+	float cArg=cos(expFHd);
+	float sArg=sin(expFHd);
+	
+	rFHdn_r+=rMu[m]*cArg-iMu[m]*sArg;
+	iFHdn_r+=iMu[m]*sArg+rMu[m]*sArg;
+  }
+  rFHd[n]=rFHdn_r; iFHd[n]=iFHdn_r;
+}
+//----
+//--p133--使用常数存储器，并将数据分块;扫描数据结构体存放
+struct kdata{
+  float x,float y,float z;
+}k;
+
+//__constant__ float kx_c[CHUNK_SIZE], ky_c[CHUNK_SIZE],kz_c[CHUNK_SIZE];
+__constant__ kdata k_c[CHUNK_SIZE];
+
+__void main(){
+  
+  int i;
+  for (i=0;i<M/CHUNK_SIZE;i++){
+    /*
+    cudaMemcpy(kx_c,&kx[i*CHUNK_SIZE],4*CHUNK_SIZE,
+		cudaMemcpyHostToDevice);
+	// 4* 浮点数/double类型，4字节
+	cudaMemcpy(ky_c,&ky[i*CHUNK_SIZE],4*CHUNK_SIZE,
+		cudaMemcpyHostToDevice);
+	cudaMemcpy(kz_c,&kz[i*CHUNK_SIZE],4*CHUNK_SIZE,
+		cudaMemcpyHostToDevice);
+	...
+	*/
+	cudaMemcpy(k_c,k,12*CHUNK_SIZE,cudaMemcpyHostToDevice);
+	cmpFHd<<<FHd_THREADS_PER_BLOCK,N/FHd_THREADS_PER_BLOCK>>>
+		(rPhi,iPhi,phiMag,x,y,z,rMu,iMu,int M);
+  }
+}
+//---
